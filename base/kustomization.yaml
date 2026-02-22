@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - n8n_deployment.yaml
+  - postgres_deployment.yaml
+  - ingress.yaml
+  - n8n_secret.yaml
+
+
+configMapGenerator:
+  - name: n8nio-config
+    env: configmap.properties
+  

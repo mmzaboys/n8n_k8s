@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8nio-deployment
+  labels:
+    app: n8nio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: n8nio
+  template:
+    metadata:
+      labels:
+        app: n8nio
+    spec:
+      containers:
+        - name: n8nio
+          image: docker.n8n.io/n8nio/n8n
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5678  
+          env:
+            - name: N8N_METRICS
+              value: "true"
+            - name: DB_TYPE
+              value: "postgresdb"
+            - name: DB_POSTGRESDB_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: n8nio-config
+                  key: DB_POSTGRESDB_DATABASE
+            - name: DB_POSTGRESDB_PORT 
+              valueFrom:
+                configMapKeyRef:
+                  name: n8nio-config
+                  key: DB_POSTGRESDB_PORT
+            - name: DB_POSTGRESDB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: n8nio-config
+                  key: DB_POSTGRESDB_HOST
+            - name: DB_POSTGRESDB_USER      
+              valueFrom:
+                secretKeyRef:
+                  name: n8nio-secret
+                  key: POSTGRES_NON_ROOT_USER
+            - name: DB_POSTGRESDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: n8nio-secret
+                  key: POSTGRES_NON_ROOT_PASSWORD
+            - name: N8N_SECURE_COOKIE
+              value: "false"
+            - name: GENERIC_TIMEZONE
+              value: "Africa/Cairo"
+          readinessProbe:
+            httpGet:
+              path: /healthz/readiness
+              port: 5678
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:  
+              path: /healthz
+              port: 5678
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: n8nio-persistent-storage
+              mountPath: /home/node/.n8n
+      volumes:
+        - name: n8nio-persistent-storage
+          persistentVolumeClaim:
+            claimName: n8nio-pvc  
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: n8nio-pvc   
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: standard                     
+---      
+apiVersion: v1
+kind: Service 
+metadata:
+  name: n8nio-service
+spec:
+  selector:
+    app: n8nio
+  ports:
+  - protocol: TCP
+    port: 5678
+    targetPort: 5678
+  type: ClusterIP           
