@@ -22,6 +22,10 @@ spec:
         volumeMounts:
         - name: postgres-storage
           mountPath: /var/lib/postgresql/data
+       # Mount the initdb.sh script from the ConfigMap to the appropriate location in the container   
+        - name: postgres-config
+          mountPath: /docker-entrypoint-initdb.d/initdb.sh
+    
         env:
         - name: POSTGRES_USER
           valueFrom:
@@ -33,8 +37,23 @@ spec:
             secretKeyRef:
               name: n8nio-secret
               key: POSTGRES_ROOT_PASSWORD
+        - name: POSTGRES_NON_ROOT_USER
+          valueFrom:
+            secretKeyRef:
+              name: n8nio-secret
+              key: POSTGRES_NON_ROOT_USER
+        - name: POSTGRES_NON_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: n8nio-secret  
+              key: POSTGRES_NON_ROOT_PASSWORD      
+
         - name: POSTGRES_DB
           value: n8n    
+      volumes:
+       - name: postgres-config
+         configMap:
+          name: postgres-config     
   volumeClaimTemplates:
   - metadata:
       name: postgres-storage
